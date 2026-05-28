@@ -5,6 +5,7 @@ import Checkins from '../pages/Checkins'
 import Trainers from '../pages/Trainers'
 import Leads from '../pages/Leads'
 import AIComposer from '../pages/AIComposer'
+import Alerts from '../pages/Alerts'
 function Maincontent() {
   return (
     <div className="bg-gray-100 flex-1 p-6">
@@ -15,6 +16,7 @@ function Maincontent() {
         <Route path="/trainers" element={<Trainers />} />
         <Route path="/leads" element={<Leads />} />
         <Route path="/ai-composer" element={<AIComposer />} />
+        <Route path="/alerts" element={<Alerts />} />
       </Routes>
     </div>
   )

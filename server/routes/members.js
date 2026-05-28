@@ -79,4 +79,54 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+router.put("/:id", async (req, res) => {
+  try {
+    // Get ID from URL
+    const { id } = req.params;
+
+    // Get Updated Data
+    const {
+      name,
+      plan,
+      status,
+      joined,
+    } = req.body;
+
+    // Update Query
+    const result = await pool.query(
+      `
+      UPDATE members
+      SET
+        name = $1,
+        plan = $2,
+        status = $3,
+        joined = $4
+      WHERE id = $5
+      RETURNING *
+      `,
+      [
+        name,
+        plan,
+        status,
+        joined,
+        id,
+      ]
+    );
+
+    // Member Not Found
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        error: "Member not found",
+      });
+    }
+
+    // Return Updated Member
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({
+      error: err.message,
+    });
+  }
+});
+
 export default router;

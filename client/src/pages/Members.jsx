@@ -1,10 +1,17 @@
 import React, { useState } from "react";
-import { Trash2, X } from "lucide-react";
+
+import {
+  Trash2,
+  X,
+  Pencil,
+} from "lucide-react";
+
 import { useQuery } from "@tanstack/react-query";
 
 const Members = () => {
   // Backend URL
-  const API_URL = import.meta.env.VITE_BACKEND_URL;
+  const API_URL =
+    import.meta.env.VITE_BACKEND_URL;
 
   // Search State
   const [search, setSearch] = useState("");
@@ -12,6 +19,13 @@ const Members = () => {
   // Modal State
   const [isModalOpen, setIsModalOpen] =
     useState(false);
+
+  // Edit Mode
+  const [isEditMode, setIsEditMode] =
+    useState(false);
+
+  const [selectedMember, setSelectedMember] =
+    useState(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -39,7 +53,7 @@ const Members = () => {
     },
   });
 
-  // Status Badge Colors
+  // Status Colors
   const getStatusColor = (status) => {
     if (status === "Active") {
       return "bg-green-100 text-green-700";
@@ -64,7 +78,7 @@ const Members = () => {
         .includes(search.toLowerCase())
   );
 
-  // Handle Form Inputs
+  // Handle Input Change
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -72,41 +86,88 @@ const Members = () => {
     });
   };
 
-  // Add Member
+  // Handle Edit
+  const handleEdit = (member) => {
+    setSelectedMember(member);
+
+    setFormData({
+      name: member.name,
+      plan: member.plan,
+      status: member.status,
+      joined: member.joined,
+    });
+
+    setIsEditMode(true);
+
+    setIsModalOpen(true);
+  };
+
+  // Reset Modal State
+  const resetModalState = () => {
+    setFormData({
+      name: "",
+      plan: "Monthly",
+      status: "Active",
+      joined: "",
+    });
+
+    setIsEditMode(false);
+
+    setSelectedMember(null);
+
+    setIsModalOpen(false);
+  };
+
+  // Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     try {
-      await fetch(
-        `${API_URL}/api/members`,
-        {
-          method: "POST",
+      // EDIT MODE
+      if (
+        isEditMode &&
+        selectedMember
+      ) {
+        await fetch(
+          `${API_URL}/api/members/${selectedMember.id}`,
+          {
+            method: "PUT",
 
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
 
-          body: JSON.stringify(formData),
-        }
-      );
+            body: JSON.stringify(formData),
+          }
+        );
+      }
+
+      // ADD MODE
+      else {
+        await fetch(
+          `${API_URL}/api/members`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify(formData),
+          }
+        );
+      }
 
       // Refetch Members
       await refetch();
 
-      // Reset Form
-      setFormData({
-        name: "",
-        plan: "Monthly",
-        status: "Active",
-        joined: "",
-      });
-
-      // Close Modal
-      setIsModalOpen(false);
+      // Reset
+      resetModalState();
     } catch (err) {
       console.error(
-        "Error adding member:",
+        "Error saving member:",
         err
       );
     }
@@ -122,7 +183,6 @@ const Members = () => {
         }
       );
 
-      // Refetch Members
       await refetch();
     } catch (err) {
       console.error(
@@ -164,7 +224,7 @@ const Members = () => {
           </p>
         </div>
 
-        {/* Add Member Button */}
+        {/* Add Button */}
         <button
           onClick={() =>
             setIsModalOpen(true)
@@ -175,7 +235,7 @@ const Members = () => {
         </button>
       </div>
 
-      {/* Search Bar */}
+      {/* Search */}
       <div className="mb-6">
         <input
           type="text"
@@ -188,9 +248,9 @@ const Members = () => {
         />
       </div>
 
-      {/* Members Table */}
+      {/* Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* Table Header */}
+        {/* Header */}
         <div className="hidden md:grid grid-cols-6 gap-4 p-4 bg-gray-100 border-b text-sm font-semibold text-gray-600">
           <div>ID</div>
           <div>Name</div>
@@ -202,7 +262,7 @@ const Members = () => {
           </div>
         </div>
 
-        {/* Table Rows */}
+        {/* Rows */}
         {filteredMembers.length > 0 ? (
           filteredMembers.map((member) => (
             <div
@@ -239,14 +299,28 @@ const Members = () => {
               <div className="flex items-center">
                 {new Date(
                   member.joined
-                ).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}
+                ).toLocaleDateString(
+                  "en-US",
+                  {
+                    month: "short",
+                    day: "numeric",
+                  }
+                )}
               </div>
 
               {/* Actions */}
-              <div className="flex items-center justify-end">
+              <div className="flex items-center justify-end gap-2">
+                {/* Edit */}
+                <button
+                  onClick={() =>
+                    handleEdit(member)
+                  }
+                  className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition"
+                >
+                  <Pencil size={18} />
+                </button>
+
+                {/* Delete */}
                 <button
                   onClick={() =>
                     deleteMember(member.id)
@@ -265,20 +339,20 @@ const Members = () => {
         )}
       </div>
 
-      {/* Add Member Modal */}
+      {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl">
-            {/* Modal Header */}
+            {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">
-                Add Member
+                {isEditMode
+                  ? "Edit Member"
+                  : "Add Member"}
               </h2>
 
               <button
-                onClick={() =>
-                  setIsModalOpen(false)
-                }
+                onClick={resetModalState}
                 className="text-gray-500 hover:text-black"
               >
                 <X size={22} />
@@ -358,7 +432,7 @@ const Members = () => {
                 </select>
               </div>
 
-              {/* Joined Date */}
+              {/* Joined */}
               <div>
                 <label className="block mb-1 font-medium">
                   Joined Date
@@ -378,9 +452,7 @@ const Members = () => {
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    setIsModalOpen(false)
-                  }
+                  onClick={resetModalState}
                   className="px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-100"
                 >
                   Cancel
@@ -390,7 +462,9 @@ const Members = () => {
                   type="submit"
                   className="bg-blue-600 text-white px-5 py-2 rounded-xl hover:bg-blue-700"
                 >
-                  Add Member
+                  {isEditMode
+                    ? "Update Member"
+                    : "Add Member"}
                 </button>
               </div>
             </form>

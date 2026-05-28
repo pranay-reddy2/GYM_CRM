@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, Users, Calendar, Dumbbell, Target, Laptop,Sparkles  } from 'lucide-react'
+import { LayoutDashboard, Users, Calendar, Dumbbell, Target, Laptop,Sparkles,AlertTriangle  } from 'lucide-react'
 function Sidebar() {
   return (
     <div className="bg-gray-800 text-white w-64 h-full p-4">
@@ -61,6 +61,15 @@ function Sidebar() {
       >
         <Sparkles />
         <span className="ml-2">AI Composer</span>
+      </NavLink>
+      <NavLink
+        to="/alerts"
+        className={({ isActive }) =>
+          `flex items-center space-x-2 py-2 px-4 ${isActive ? 'bg-teal-600' : 'hover:bg-gray-600'}`
+        }
+      >
+        <AlertTriangle />
+        <span className="ml-2">Alerts</span>
       </NavLink>
     </div>
   )

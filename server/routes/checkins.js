@@ -29,8 +29,8 @@ router.post("/", async (req, res) => {
       member_name,
       membership,
       check_in,
-      status,
     } = req.body;
+
     const result = await pool.query(
       `
       INSERT INTO checkins
@@ -38,18 +38,18 @@ router.post("/", async (req, res) => {
         member_name,
         membership,
         check_in,
-        status
+        date
       )
-      VALUES ($1, $2, $3, $4)
+      VALUES ($1, $2, $3, CURRENT_DATE)
       RETURNING *
       `,
       [
         member_name,
         membership,
         check_in,
-        status,
       ]
     );
+
     res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({
