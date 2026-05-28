@@ -11,6 +11,7 @@ import dashboardRouter from "./routes/dashboard.js"
 import pool from "./db.js"
 import aiRouter from "./routes/ai.js"
 import alertsRouter from "./routes/alerts.js";
+import paymentsRouter from "./routes/payment.js";
 
 // Test DB connection
 pool.query("SELECT NOW()", (err, res) => {
@@ -38,6 +39,8 @@ app.use("/api/dashboard", dashboardRouter)
 app.use("/api/ai", aiRouter)
 
 app.use("/api/alerts", alertsRouter);
+
+app.use("/api/payments", paymentsRouter);
 
 const PORT = process.env.PORT || 5000
 

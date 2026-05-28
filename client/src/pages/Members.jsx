@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 
 import {
   Trash2,
@@ -8,13 +8,19 @@ import {
 
 import { useQuery } from "@tanstack/react-query";
 
+import { useNavigate } from "react-router-dom";
+
 const Members = () => {
+  // Navigation
+  const navigate = useNavigate();
+
   // Backend URL
   const API_URL =
     import.meta.env.VITE_BACKEND_URL;
 
   // Search State
-  const [search, setSearch] = useState("");
+  const [search, setSearch] =
+    useState("");
 
   // Modal State
   const [isModalOpen, setIsModalOpen] =
@@ -28,14 +34,25 @@ const Members = () => {
     useState(null);
 
   // Form State
-  const [formData, setFormData] = useState({
-    name: "",
-    plan: "Monthly",
-    status: "Active",
-    joined: "",
-  });
+  const [formData, setFormData] =
+    useState({
+      name: "",
+      plan: "Monthly",
+      status: "Active",
+      joined: "",
 
-  // Fetch Members
+      phone: "",
+      email: "",
+      address: "",
+      date_of_birth: "",
+      gender: "",
+      emergency_contact: "",
+      goal: "",
+    });
+
+  //
+  // FETCH MEMBERS
+  //
   const {
     data: members = [],
     isLoading,
@@ -49,12 +66,22 @@ const Members = () => {
         `${API_URL}/api/members`
       );
 
+      if (!res.ok) {
+        throw new Error(
+          "Failed to fetch members"
+        );
+      }
+
       return res.json();
     },
   });
 
-  // Status Colors
-  const getStatusColor = (status) => {
+  //
+  // STATUS COLORS
+  //
+  const getStatusColor = (
+    status
+  ) => {
     if (status === "Active") {
       return "bg-green-100 text-green-700";
     }
@@ -70,24 +97,34 @@ const Members = () => {
     return "bg-gray-100 text-gray-700";
   };
 
-  // Search Filter
-  const filteredMembers = members.filter(
-    (member) =>
+  //
+  // SEARCH FILTER
+  //
+  const filteredMembers =
+    members.filter((member) =>
       member.name
         .toLowerCase()
         .includes(search.toLowerCase())
-  );
+    );
 
-  // Handle Input Change
+  //
+  // HANDLE INPUT CHANGE
+  //
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+
+      [e.target.name]:
+        e.target.value,
     });
   };
 
-  // Handle Edit
-  const handleEdit = (member) => {
+  //
+  // HANDLE EDIT
+  //
+  const handleEdit = (
+    member
+  ) => {
     setSelectedMember(member);
 
     setFormData({
@@ -95,6 +132,23 @@ const Members = () => {
       plan: member.plan,
       status: member.status,
       joined: member.joined,
+
+      phone: member.phone || "",
+      email: member.email || "",
+      address:
+        member.address || "",
+
+      date_of_birth:
+        member.date_of_birth || "",
+
+      gender:
+        member.gender || "",
+
+      emergency_contact:
+        member.emergency_contact ||
+        "",
+
+      goal: member.goal || "",
     });
 
     setIsEditMode(true);
@@ -102,13 +156,23 @@ const Members = () => {
     setIsModalOpen(true);
   };
 
-  // Reset Modal State
+  //
+  // RESET MODAL
+  //
   const resetModalState = () => {
     setFormData({
       name: "",
       plan: "Monthly",
       status: "Active",
       joined: "",
+
+      phone: "",
+      email: "",
+      address: "",
+      date_of_birth: "",
+      gender: "",
+      emergency_contact: "",
+      goal: "",
     });
 
     setIsEditMode(false);
@@ -118,8 +182,12 @@ const Members = () => {
     setIsModalOpen(false);
   };
 
-  // Submit
-  const handleSubmit = async (e) => {
+  //
+  // HANDLE SUBMIT
+  //
+  const handleSubmit = async (
+    e
+  ) => {
     e.preventDefault();
 
     try {
@@ -138,7 +206,9 @@ const Members = () => {
                 "application/json",
             },
 
-            body: JSON.stringify(formData),
+            body: JSON.stringify(
+              formData
+            ),
           }
         );
       }
@@ -155,7 +225,9 @@ const Members = () => {
                 "application/json",
             },
 
-            body: JSON.stringify(formData),
+            body: JSON.stringify(
+              formData
+            ),
           }
         );
       }
@@ -163,7 +235,7 @@ const Members = () => {
       // Refetch Members
       await refetch();
 
-      // Reset
+      // Reset Modal
       resetModalState();
     } catch (err) {
       console.error(
@@ -173,8 +245,12 @@ const Members = () => {
     }
   };
 
-  // Delete Member
-  const deleteMember = async (id) => {
+  //
+  // DELETE MEMBER
+  //
+  const deleteMember = async (
+    id
+  ) => {
     try {
       await fetch(
         `${API_URL}/api/members/${id}`,
@@ -192,7 +268,9 @@ const Members = () => {
     }
   };
 
-  // Loading State
+  //
+  // LOADING
+  //
   if (isLoading) {
     return (
       <div className="p-6">
@@ -201,7 +279,9 @@ const Members = () => {
     );
   }
 
-  // Error State
+  //
+  // ERROR
+  //
   if (isError) {
     return (
       <div className="p-6 text-red-500">
@@ -220,7 +300,8 @@ const Members = () => {
           </h1>
 
           <p className="text-gray-500 mt-1">
-            Manage gym members and plans
+            Manage gym members and
+            memberships
           </p>
         </div>
 
@@ -242,7 +323,9 @@ const Members = () => {
           placeholder="Search members..."
           value={search}
           onChange={(e) =>
-            setSearch(e.target.value)
+            setSearch(
+              e.target.value
+            )
           }
           className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
         />
@@ -250,7 +333,7 @@ const Members = () => {
 
       {/* Table */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        {/* Header */}
+        {/* Table Header */}
         <div className="hidden md:grid grid-cols-6 gap-4 p-4 bg-gray-100 border-b text-sm font-semibold text-gray-600">
           <div>ID</div>
           <div>Name</div>
@@ -262,76 +345,94 @@ const Members = () => {
           </div>
         </div>
 
-        {/* Rows */}
-        {filteredMembers.length > 0 ? (
-          filteredMembers.map((member) => (
-            <div
-              key={member.id}
-              className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border-b last:border-b-0 hover:bg-gray-50 transition"
-            >
-              {/* ID */}
-              <div className="flex items-center">
-                #{member.id}
-              </div>
+        {/* Table Rows */}
+        {filteredMembers.length >
+        0 ? (
+          filteredMembers.map(
+            (member) => (
+              <div
+                key={member.id}
+                onClick={() =>
+                  navigate(
+                    `/members/${member.id}`
+                  )
+                }
+                className="grid grid-cols-1 md:grid-cols-6 gap-4 p-4 border-b last:border-b-0 hover:bg-gray-50 transition cursor-pointer"
+              >
+                {/* ID */}
+                <div className="flex items-center">
+                  #{member.id}
+                </div>
 
-              {/* Name */}
-              <div className="flex items-center font-medium">
-                {member.name}
-              </div>
+                {/* Name */}
+                <div className="flex items-center font-medium">
+                  {member.name}
+                </div>
 
-              {/* Plan */}
-              <div className="flex items-center">
-                {member.plan}
-              </div>
+                {/* Plan */}
+                <div className="flex items-center">
+                  {member.plan}
+                </div>
 
-              {/* Status */}
-              <div className="flex items-center">
-                <span
-                  className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
-                    member.status
-                  )}`}
-                >
-                  {member.status}
-                </span>
-              </div>
+                {/* Status */}
+                <div className="flex items-center">
+                  <span
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(
+                      member.status
+                    )}`}
+                  >
+                    {member.status}
+                  </span>
+                </div>
 
-              {/* Joined */}
-              <div className="flex items-center">
-                {new Date(
-                  member.joined
-                ).toLocaleDateString(
-                  "en-US",
-                  {
-                    month: "short",
-                    day: "numeric",
-                  }
-                )}
-              </div>
+                {/* Joined */}
+                <div className="flex items-center">
+                  {new Date(
+                    member.joined
+                  ).toLocaleDateString()}
+                </div>
 
-              {/* Actions */}
-              <div className="flex items-center justify-end gap-2">
-                {/* Edit */}
-                <button
-                  onClick={() =>
-                    handleEdit(member)
-                  }
-                  className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition"
-                >
-                  <Pencil size={18} />
-                </button>
+                {/* Actions */}
+                <div className="flex items-center justify-end gap-2">
+                  {/* Edit */}
+                  <button
+                    onClick={(
+                      e
+                    ) => {
+                      e.stopPropagation();
 
-                {/* Delete */}
-                <button
-                  onClick={() =>
-                    deleteMember(member.id)
-                  }
-                  className="p-2 rounded-lg hover:bg-red-100 text-red-600 transition"
-                >
-                  <Trash2 size={18} />
-                </button>
+                      handleEdit(
+                        member
+                      );
+                    }}
+                    className="p-2 rounded-lg hover:bg-blue-100 text-blue-600 transition"
+                  >
+                    <Pencil
+                      size={18}
+                    />
+                  </button>
+
+                  {/* Delete */}
+                  <button
+                    onClick={(
+                      e
+                    ) => {
+                      e.stopPropagation();
+
+                      deleteMember(
+                        member.id
+                      );
+                    }}
+                    className="p-2 rounded-lg hover:bg-red-100 text-red-600 transition"
+                  >
+                    <Trash2
+                      size={18}
+                    />
+                  </button>
+                </div>
               </div>
-            </div>
-          ))
+            )
+          )
         ) : (
           <div className="p-10 text-center text-gray-400">
             No members found
@@ -339,10 +440,10 @@ const Members = () => {
         )}
       </div>
 
-      {/* Modal */}
+      {/* MODAL */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white w-full max-w-2xl rounded-2xl p-6 shadow-xl">
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold">
@@ -352,7 +453,9 @@ const Members = () => {
               </h2>
 
               <button
-                onClick={resetModalState}
+                onClick={
+                  resetModalState
+                }
                 className="text-gray-500 hover:text-black"
               >
                 <X size={22} />
@@ -361,90 +464,277 @@ const Members = () => {
 
             {/* Form */}
             <form
-              onSubmit={handleSubmit}
+              onSubmit={
+                handleSubmit
+              }
               className="space-y-4"
             >
-              {/* Name */}
-              <div>
-                <label className="block mb-1 font-medium">
-                  Name
-                </label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Name */}
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Name
+                  </label>
 
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
-                />
+                  <input
+                    type="text"
+                    name="name"
+                    value={
+                      formData.name
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    required
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Phone
+                  </label>
+
+                  <input
+                    type="text"
+                    name="phone"
+                    value={
+                      formData.phone
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+
+                {/* Email */}
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Email
+                  </label>
+
+                  <input
+                    type="email"
+                    name="email"
+                    value={
+                      formData.email
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+
+                {/* Plan */}
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Plan
+                  </label>
+
+                  <select
+                    name="plan"
+                    value={
+                      formData.plan
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="Monthly">
+                      Monthly
+                    </option>
+
+                    <option value="Quarterly">
+                      Quarterly
+                    </option>
+
+                    <option value="Yearly">
+                      Yearly
+                    </option>
+                  </select>
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Status
+                  </label>
+
+                  <select
+                    name="status"
+                    value={
+                      formData.status
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="Active">
+                      Active
+                    </option>
+
+                    <option value="Inactive">
+                      Inactive
+                    </option>
+
+                    <option value="Pending">
+                      Pending
+                    </option>
+                  </select>
+                </div>
+
+                {/* Joined */}
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Joined Date
+                  </label>
+
+                  <input
+                    type="date"
+                    name="joined"
+                    value={
+                      formData.joined
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    required
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+
+                {/* DOB */}
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Date of Birth
+                  </label>
+
+                  <input
+                    type="date"
+                    name="date_of_birth"
+                    value={
+                      formData.date_of_birth
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+
+                {/* Gender */}
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Gender
+                  </label>
+
+                  <select
+                    name="gender"
+                    value={
+                      formData.gender
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="">
+                      Select Gender
+                    </option>
+
+                    <option value="Male">
+                      Male
+                    </option>
+
+                    <option value="Female">
+                      Female
+                    </option>
+
+                    <option value="Other">
+                      Other
+                    </option>
+                  </select>
+                </div>
+
+                {/* Emergency */}
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Emergency Contact
+                  </label>
+
+                  <input
+                    type="text"
+                    name="emergency_contact"
+                    value={
+                      formData.emergency_contact
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
+                  />
+                </div>
+
+                {/* Goal */}
+                <div>
+                  <label className="block mb-1 font-medium">
+                    Fitness Goal
+                  </label>
+
+                  <select
+                    name="goal"
+                    value={
+                      formData.goal
+                    }
+                    onChange={
+                      handleChange
+                    }
+                    className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
+                  >
+                    <option value="">
+                      Select Goal
+                    </option>
+
+                    <option value="Weight Loss">
+                      Weight Loss
+                    </option>
+
+                    <option value="Muscle Gain">
+                      Muscle Gain
+                    </option>
+
+                    <option value="General Fitness">
+                      General Fitness
+                    </option>
+
+                    <option value="Flexibility">
+                      Flexibility
+                    </option>
+                  </select>
+                </div>
               </div>
 
-              {/* Plan */}
+              {/* Address */}
               <div>
                 <label className="block mb-1 font-medium">
-                  Plan
+                  Address
                 </label>
 
-                <select
-                  name="plan"
-                  value={formData.plan}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
-                >
-                  <option value="Monthly">
-                    Monthly
-                  </option>
-
-                  <option value="Quarterly">
-                    Quarterly
-                  </option>
-
-                  <option value="Yearly">
-                    Yearly
-                  </option>
-                </select>
-              </div>
-
-              {/* Status */}
-              <div>
-                <label className="block mb-1 font-medium">
-                  Status
-                </label>
-
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
-                >
-                  <option value="Active">
-                    Active
-                  </option>
-
-                  <option value="Inactive">
-                    Inactive
-                  </option>
-
-                  <option value="Pending">
-                    Pending
-                  </option>
-                </select>
-              </div>
-
-              {/* Joined */}
-              <div>
-                <label className="block mb-1 font-medium">
-                  Joined Date
-                </label>
-
-                <input
-                  type="date"
-                  name="joined"
-                  value={formData.joined}
-                  onChange={handleChange}
-                  required
-                  className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
+                <textarea
+                  name="address"
+                  value={
+                    formData.address
+                  }
+                  onChange={
+                    handleChange
+                  }
+                  rows={3}
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400 resize-none"
                 />
               </div>
 
@@ -452,7 +742,9 @@ const Members = () => {
               <div className="flex justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={resetModalState}
+                  onClick={
+                    resetModalState
+                  }
                   className="px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-100"
                 >
                   Cancel
