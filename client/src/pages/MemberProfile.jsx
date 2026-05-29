@@ -19,14 +19,14 @@ import {
   Plus,
   X,
   MessageCircle,
+  Sparkles,
+  Copy,
+  Loader2,
+  Send,
 } from "lucide-react";
-
 const MemberProfile = () => {
   const API_URL =
     import.meta.env.VITE_BACKEND_URL;
-
-  const GYM_NAME =
-    "Elite Fitness Gym";
 
   const { id } = useParams();
 
@@ -36,6 +36,9 @@ const MemberProfile = () => {
   // Tabs
   const [activeTab, setActiveTab] =
     useState("details");
+
+  const [isRiskModalOpen, setIsRiskModalOpen,] =
+    useState(false);
 
   // Payment Modal
   const [isModalOpen, setIsModalOpen] =
@@ -52,6 +55,18 @@ const MemberProfile = () => {
       note: "",
     });
 
+
+  const [situation, setSituation] =
+    useState("welcome");
+
+  const [customContext, setCustomContext] =
+    useState("");
+
+  const [message, setMessage] =
+    useState("");
+
+  const [isGenerating, setIsGenerating] =
+    useState(false);
   //
   // FETCH MEMBER
   //
@@ -225,6 +240,26 @@ const MemberProfile = () => {
     });
   };
 
+  const {
+    data: settings,
+  } = useQuery({
+    queryKey: ["settings"],
+
+    queryFn: async () => {
+      const res = await fetch(
+        `${API_URL}/api/settings`
+      );
+
+      if (!res.ok) {
+        throw new Error(
+          "Failed to fetch settings"
+        );
+      }
+
+      return res.json();
+    },
+  });
+
   //
   // SEND WHATSAPP BILL
   //
@@ -244,8 +279,15 @@ const MemberProfile = () => {
         }
       );
 
+    const gymName =
+      settings?.gym_name ||
+      "Gym";
+
+    const gymPhone =
+      settings?.phone || "";
+
     const message = `
-🏋️ *${GYM_NAME.toUpperCase()}*
+🏋️ *${gymName.toUpperCase()}*
 ━━━━━━━━━━━━━━━━━━━━
 📄 *PAYMENT RECEIPT*
 ━━━━━━━━━━━━━━━━━━━━
@@ -260,21 +302,26 @@ const MemberProfile = () => {
 💳 Method: ${payment.method}
 📅 Date: ${date.toLocaleDateString()}
 🗓️ Period: ${period}
-${
-  payment.note
-    ? `📝 Note: ${payment.note}`
-    : ""
-}
+${payment.note
+        ? `📝 Note: ${payment.note}`
+        : ""
+      }
 
 ━━━━━━━━━━━━━━━━━━━━
 ✅ *TOTAL PAID: ₹${payment.amount}*
 ━━━━━━━━━━━━━━━━━━━━
 
 Thank you for your payment! 🙏
+
 Keep crushing your fitness goals! 💪
 
-${GYM_NAME}
-    `.trim();
+${gymName}
+
+${gymPhone
+        ? `📞 ${gymPhone}`
+        : ""
+      }
+  `.trim();
 
     const phone =
       member.phone
@@ -300,6 +347,138 @@ ${GYM_NAME}
     );
   };
 
+  const generateAIMessage =
+    async () => {
+      try {
+        setIsGenerating(true);
+
+        const res = await fetch(
+          `${API_URL}/api/ai/generate-message`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              memberId: member.id,
+              situation,
+              customContext,
+            }),
+          }
+        );
+
+        const data =
+          await res.json();
+
+        setMessage(data.message);
+      } catch (err) {
+        console.error(err);
+
+        alert(
+          "Failed to generate message"
+        );
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
+  const copyToClipboard =
+    async () => {
+      await navigator.clipboard.writeText(
+        message
+      );
+
+      alert("Copied!");
+    };
+
+  const sendAIToWhatsApp = () => {
+    if (!member?.phone) {
+      alert(
+        "Member phone number not available"
+      );
+      return;
+    }
+
+    if (!message) {
+      alert(
+        "Generate a message first"
+      );
+      return;
+    }
+
+    const phone = `91${member.phone}`;
+
+    const encoded =
+      encodeURIComponent(
+        message
+      );
+
+    window.open(
+      `https://wa.me/${phone}?text=${encoded}`,
+      "_blank"
+    );
+  };
+  const {
+    data: alerts = [],
+  } = useQuery({
+    queryKey: ["alerts"],
+
+    queryFn: async () => {
+      const res = await fetch(
+        `${API_URL}/api/alerts/at-risk`
+      );
+
+      if (!res.ok) {
+        throw new Error(
+          "Failed to fetch alerts"
+        );
+      }
+
+      return res.json();
+    },
+  });
+
+  const memberAlert =
+    alerts.find(
+      (alert) =>
+        Number(
+          alert.member_id ||
+          alert.id
+        ) === Number(member?.id)
+    ) || null;
+
+  const daysInactive =
+    Number(
+      memberAlert?.days_inactive || 0
+    );
+
+  let riskLevel = null;
+  let riskColor = "";
+
+  if (daysInactive >= 30) {
+    riskLevel = "High Risk";
+
+    riskColor =
+      "bg-red-100 text-red-700";
+  } else if (
+    daysInactive >= 20
+  ) {
+    riskLevel =
+      "Medium Risk";
+
+    riskColor =
+      "bg-orange-100 text-orange-700";
+  } else if (
+    daysInactive >= 10
+  ) {
+    riskLevel = "At Risk";
+
+    riskColor =
+      "bg-yellow-100 text-yellow-700";
+  }
   //
   // LOADING
   //
@@ -321,25 +500,36 @@ ${GYM_NAME}
 
         <div className="flex items-center gap-3 mt-3 flex-wrap">
           <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
-            {member.plan}
+            {member.plan || "N/A"}
           </span>
 
           <span
-            className={`px-3 py-1 rounded-full text-sm font-semibold ${
-              member.status ===
+            className={`px-3 py-1 rounded-full text-sm font-semibold ${member.status ===
               "Active"
-                ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
-            }`}
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+              }`}
           >
-            {member.status}
+            {member.status || "N/A"}
           </span>
 
-          {member.goal && (
-            <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
-              {member.goal}
-            </span>
-          )}
+          <span className="bg-purple-100 text-purple-700 px-3 py-1 rounded-full text-sm font-semibold">
+            {member.goal || "No Goal"}
+          </span>
+
+          <button
+            onClick={() =>
+              setIsRiskModalOpen(true)
+            }
+            className={`px-3 py-1 rounded-full text-sm font-semibold ${riskLevel
+              ? riskColor
+              : "bg-gray-100 text-gray-700"
+              }`}
+          >
+            {riskLevel
+              ? `⚠ ${riskLevel} • ${daysInactive} Days`
+              : "No Risk Detected"}
+          </button>
         </div>
       </div>
 
@@ -351,12 +541,11 @@ ${GYM_NAME}
               "details"
             )
           }
-          className={`px-5 py-3 rounded-xl font-medium transition ${
-            activeTab ===
+          className={`px-5 py-3 rounded-xl font-medium transition ${activeTab ===
             "details"
-              ? "bg-blue-600 text-white"
-              : "bg-white border border-gray-200"
-          }`}
+            ? "bg-blue-600 text-white"
+            : "bg-white border border-gray-200"
+            }`}
         >
           <div className="flex items-center gap-2">
             <User size={18} />
@@ -370,12 +559,11 @@ ${GYM_NAME}
               "checkins"
             )
           }
-          className={`px-5 py-3 rounded-xl font-medium transition ${
-            activeTab ===
+          className={`px-5 py-3 rounded-xl font-medium transition ${activeTab ===
             "checkins"
-              ? "bg-blue-600 text-white"
-              : "bg-white border border-gray-200"
-          }`}
+            ? "bg-blue-600 text-white"
+            : "bg-white border border-gray-200"
+            }`}
         >
           <div className="flex items-center gap-2">
             <Clock3 size={18} />
@@ -389,16 +577,29 @@ ${GYM_NAME}
               "payments"
             )
           }
-          className={`px-5 py-3 rounded-xl font-medium transition ${
-            activeTab ===
+          className={`px-5 py-3 rounded-xl font-medium transition ${activeTab ===
             "payments"
-              ? "bg-blue-600 text-white"
-              : "bg-white border border-gray-200"
-          }`}
+            ? "bg-blue-600 text-white"
+            : "bg-white border border-gray-200"
+            }`}
         >
           <div className="flex items-center gap-2">
             <CreditCard size={18} />
             Payments
+          </div>
+        </button>
+        <button
+          onClick={() =>
+            setActiveTab("ai")
+          }
+          className={`px-5 py-3 rounded-xl font-medium transition ${activeTab === "ai"
+            ? "bg-blue-600 text-white"
+            : "bg-white border border-gray-200"
+            }`}
+        >
+          <div className="flex items-center gap-2">
+            <Sparkles size={18} />
+            AI Messages
           </div>
         </button>
       </div>
@@ -406,189 +607,377 @@ ${GYM_NAME}
       {/* DETAILS TAB */}
       {activeTab ===
         "details" && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <p className="text-sm text-gray-500">
-                Member Name
-              </p>
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <p className="text-sm text-gray-500">
+                  Member Name
+                </p>
 
-              <h2 className="text-xl font-semibold mt-1">
-                {member.name}
-              </h2>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">
-                Membership Plan
-              </p>
-
-              <h2 className="text-xl font-semibold mt-1">
-                {member.plan}
-              </h2>
-            </div>
-
-            <div>
-              <p className="text-sm text-gray-500">
-                Phone
-              </p>
-
-              {member.phone ? (
-                <a
-                  href={`https://wa.me/91${member.phone}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-blue-600 font-semibold mt-1 block hover:underline"
-                >
-                  {member.phone}
-                </a>
-              ) : (
-                <h2 className="text-lg font-semibold mt-1">
-                  N/A
+                <h2 className="text-xl font-semibold mt-1">
+                  {member.name}
                 </h2>
-              )}
-            </div>
+              </div>
 
-            <div>
-              <p className="text-sm text-gray-500">
-                Email
-              </p>
+              <div>
+                <p className="text-sm text-gray-500">
+                  Membership Plan
+                </p>
 
-              <h2 className="text-lg font-semibold mt-1">
-                {member.email ||
-                  "N/A"}
-              </h2>
+                <h2 className="text-xl font-semibold mt-1">
+                  {member.plan}
+                </h2>
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500">
+                  Phone
+                </p>
+
+                {member.phone ? (
+                  <a
+                    href={`https://wa.me/91${member.phone}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-blue-600 font-semibold mt-1 block hover:underline"
+                  >
+                    {member.phone}
+                  </a>
+                ) : (
+                  <h2 className="text-lg font-semibold mt-1">
+                    N/A
+                  </h2>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm text-gray-500">
+                  Email
+                </p>
+
+                <h2 className="text-lg font-semibold mt-1">
+                  {member.email ||
+                    "N/A"}
+                </h2>
+              </div>
+
             </div>
           </div>
-        </div>
-      )}
+        )}
 
       {/* CHECKINS TAB */}
       {activeTab ===
         "checkins" && (
-        <div className="space-y-4">
-          {checkins.map(
-            (checkin) => (
-              <div
-                key={checkin.id}
-                className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm"
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold">
-                      Gym Visit
-                    </p>
+          <div className="space-y-4">
+            {checkins.map(
+              (checkin) => (
+                <div
+                  key={checkin.id}
+                  className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold">
+                        Gym Visit
+                      </p>
 
-                    <p className="text-gray-500 text-sm mt-1">
-                      {
-                        checkin.date
-                      }
-                    </p>
-                  </div>
+                      <p className="text-gray-500 text-sm mt-1">
+                        {
+                          checkin.date
+                        }
+                      </p>
+                    </div>
 
-                  <div className="text-right">
-                    <p className="font-medium">
-                      In:{" "}
-                      {
-                        checkin.check_in
-                      }
-                    </p>
+                    <div className="text-right">
+                      <p className="font-medium">
+                        In:{" "}
+                        {
+                          checkin.check_in
+                        }
+                      </p>
 
-                    <p className="text-sm text-gray-500 mt-1">
-                      Out:{" "}
-                      {checkin.check_out ||
-                        "-"}
-                    </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Out:{" "}
+                        {checkin.check_out ||
+                          "-"}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )
-          )}
-        </div>
-      )}
+              )
+            )}
+          </div>
+        )}
 
       {/* PAYMENTS TAB */}
       {activeTab ===
         "payments" && (
-        <div>
-          {/* Top Bar */}
-          <div className="flex justify-end mb-5">
-            <button
-              onClick={() =>
-                setIsModalOpen(true)
-              }
-              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl transition"
-            >
-              <Plus size={18} />
-              Log Payment
-            </button>
-          </div>
+          <div>
+            {/* Top Bar */}
+            <div className="flex justify-end mb-5">
+              <button
+                onClick={() =>
+                  setIsModalOpen(true)
+                }
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3 rounded-xl transition"
+              >
+                <Plus size={18} />
+                Log Payment
+              </button>
+            </div>
 
-          {/* Payment Cards */}
-          <div className="space-y-4">
-            {payments.length >
-            0 ? (
-              payments.map(
-                (payment) => (
-                  <div
-                    key={payment.id}
-                    className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm"
-                  >
-                    <div className="flex items-center justify-between">
-                      {/* Left */}
-                      <div>
-                        <h2 className="text-xl font-bold">
-                          ₹
-                          {
-                            payment.amount
-                          }
-                        </h2>
+            {/* Payment Cards */}
+            <div className="space-y-4">
+              {payments.length >
+                0 ? (
+                payments.map(
+                  (payment) => (
+                    <div
+                      key={payment.id}
+                      className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between">
+                        {/* Left */}
+                        <div>
+                          <h2 className="text-xl font-bold">
+                            ₹
+                            {
+                              payment.amount
+                            }
+                          </h2>
 
-                        <p className="text-gray-500 text-sm mt-1">
-                          {
-                            payment.method
-                          }
-                        </p>
-                      </div>
-
-                      {/* Right */}
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <p className="font-medium">
-                            {new Date(
-                              payment.date
-                            ).toLocaleDateString()}
-                          </p>
-
-                          <p className="text-sm text-gray-500 mt-1">
-                            {payment.note ||
-                              "No note"}
+                          <p className="text-gray-500 text-sm mt-1">
+                            {
+                              payment.method
+                            }
                           </p>
                         </div>
 
-                        {/* WhatsApp */}
-                        <button
-                          onClick={() =>
-                            sendWhatsAppBill(
-                              payment
-                            )
-                          }
-                          className="p-2 rounded-lg hover:bg-green-100 text-green-600 transition"
-                          title="Send bill via WhatsApp"
-                        >
-                          <MessageCircle
-                            size={18}
-                          />
-                        </button>
+                        {/* Right */}
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <p className="font-medium">
+                              {new Date(
+                                payment.date
+                              ).toLocaleDateString()}
+                            </p>
+
+                            <p className="text-sm text-gray-500 mt-1">
+                              {payment.note ||
+                                "No note"}
+                            </p>
+                          </div>
+
+                          {/* WhatsApp */}
+                          <button
+                            onClick={() =>
+                              sendWhatsAppBill(
+                                payment
+                              )
+                            }
+                            className="p-2 rounded-lg hover:bg-green-100 text-green-600 transition"
+                            title="Send bill via WhatsApp"
+                          >
+                            <MessageCircle
+                              size={18}
+                            />
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )
                 )
-              )
+              ) : (
+                <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center text-gray-400">
+                  No payments found
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      {/* AI MESSAGES TAB */}
+      {activeTab === "ai" && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+          <h2 className="text-xl font-bold mb-5">
+            AI Message Generator
+          </h2>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block mb-2 font-medium">
+                Situation
+              </label>
+
+              <select
+                value={situation}
+                onChange={(e) =>
+                  setSituation(
+                    e.target.value
+                  )
+                }
+                className="w-full border border-gray-300 rounded-xl px-4 py-3"
+              >
+                <option value="welcome">
+                  Welcome
+                </option>
+
+                <option value="inactive_member">
+                  Inactive Member
+                </option>
+
+                <option value="membership_expiring">
+                  Membership Expiring
+                </option>
+
+                <option value="custom">
+                  Custom
+                </option>
+              </select>
+            </div>
+
+            {situation ===
+              "custom" && (
+                <textarea
+                  rows={4}
+                  value={
+                    customContext
+                  }
+                  onChange={(e) =>
+                    setCustomContext(
+                      e.target.value
+                    )
+                  }
+                  placeholder="Enter custom instructions..."
+                  className="w-full border border-gray-300 rounded-xl px-4 py-3 resize-none"
+                />
+              )}
+
+            <button
+              onClick={
+                generateAIMessage
+              }
+              disabled={
+                isGenerating
+              }
+              className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl flex items-center justify-center gap-2"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2
+                    size={18}
+                    className="animate-spin"
+                  />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles
+                    size={18}
+                  />
+                  Generate Message
+                </>
+              )}
+            </button>
+
+            {message && (
+              <>
+                <textarea
+                  value={message}
+                  onChange={(e) =>
+                    setMessage(
+                      e.target.value
+                    )
+                  }
+                  rows={8}
+                  className="w-full border border-gray-300 rounded-xl p-4 resize-none"
+                />
+
+                <div className="flex justify-end gap-3">
+
+                  <button
+                    onClick={sendAIToWhatsApp}
+                    className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-xl"
+                  >
+                    <Send size={18} />
+                    WhatsApp
+                  </button>
+
+                  <button
+                    onClick={copyToClipboard}
+                    className="flex items-center gap-2 bg-gray-900 text-white px-5 py-2 rounded-xl"
+                  >
+                    <Copy size={18} />
+                    Copy
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isRiskModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-lg rounded-2xl p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-2xl font-bold">
+                Member Retention Status
+              </h2>
+
+              <button
+                onClick={() =>
+                  setIsRiskModalOpen(false)
+                }
+                className="text-gray-500 hover:text-black"
+              >
+                <X size={22} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p>
+                <strong>
+                  Days Inactive:
+                </strong>{" "}
+                {daysInactive || 0}
+              </p>
+
+              <p>
+                <strong>
+                  Risk Level:
+                </strong>{" "}
+                {riskLevel ||
+                  "No Risk"}
+              </p>
+
+              <p>
+                <strong>
+                  Last Check-in:
+                </strong>{" "}
+                {memberAlert?.last_checkin
+                  ? new Date(
+                    memberAlert.last_checkin
+                  ).toLocaleDateString()
+                  : "N/A"}
+              </p>
+            </div>
+
+            {member.phone ? (
+              <button
+                onClick={() =>
+                  window.open(
+                    `https://wa.me/91${member.phone}`,
+                    "_blank"
+                  )
+                }
+                className="mt-6 w-full bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-xl"
+              >
+                Contact on WhatsApp
+              </button>
             ) : (
-              <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center text-gray-400">
-                No payments found
-              </div>
+              <p className="mt-6 text-center text-gray-500">
+                No phone number available
+              </p>
             )}
           </div>
         </div>
