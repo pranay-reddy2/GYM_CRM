@@ -4,7 +4,6 @@ import Members from '../pages/Members'
 import Checkins from '../pages/Checkins'
 import Trainers from '../pages/Trainers'
 import Leads from '../pages/Leads'
-import Alerts from '../pages/Alerts'
 import MemberProfile from '../pages/MemberProfile'
 import Settings from '../pages/Settings'
 import TrainerProfile from '../pages/TrainerProfile'
@@ -18,7 +17,6 @@ function Maincontent() {
         <Route path="/checkins" element={<Checkins />} />
         <Route path="/trainers" element={<Trainers />}/>
         <Route path="/leads" element={<Leads />} />
-        <Route path="/alerts" element={<Alerts />} />
         <Route path="/members/:id" element={<MemberProfile />}/>
         <Route path="/settings" element={<Settings />} />
         <Route path="/trainers/:id" element={<TrainerProfile />} />

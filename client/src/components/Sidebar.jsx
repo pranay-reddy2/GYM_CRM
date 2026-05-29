@@ -54,15 +54,6 @@ function Sidebar() {
         <span className="ml-2">Leads</span>
       </NavLink>
       <NavLink
-        to="/alerts"
-        className={({ isActive }) =>
-          `flex items-center space-x-2 py-2 px-4 ${isActive ? 'bg-teal-600' : 'hover:bg-gray-600'}`
-        }
-      >
-        <AlertTriangle />
-        <span className="ml-2">Alerts</span>
-      </NavLink>
-      <NavLink
         to="/settings"
         className={({ isActive }) =>
           `flex items-center space-x-2 py-2 px-4 ${isActive ? 'bg-teal-600' : 'hover:bg-gray-600'}` 
