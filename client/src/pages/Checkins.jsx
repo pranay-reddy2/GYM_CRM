@@ -1,785 +1,285 @@
-import React, {
-  useMemo,
-  useState,
-} from "react";
+import { useMemo, useState } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Plus, Clock, X, Search, Trash2, Users, CheckCircle2, LogOut, Loader2 } from 'lucide-react'
 
-import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-} from "@tanstack/react-query";
+const API_URL = import.meta.env.VITE_BACKEND_URL
 
-import {
-  Plus,
-  Clock,
-  X,
-  Search,
-  Trash2,
-  Users,
-  CheckCircle2,
-  LogOut,
-  Loader2,
-} from "lucide-react";
+export default function Checkins() {
+  const queryClient = useQueryClient()
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [search, setSearch] = useState('')
+  const [formData, setFormData] = useState({ memberName: '', time: '' })
 
-// Skeleton Components
-const Skeleton = ({
-  className = "",
-}) => (
-  <div
-    className={`animate-pulse bg-gray-200 rounded-lg ${className}`}
-  />
-);
-
-const SkeletonRow = () => (
-  <div className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 border-b last:border-b-0">
-    <div className="flex items-center gap-3">
-      <Skeleton className="w-11 h-11 rounded-full" />
-
-      <div className="flex flex-col gap-2 flex-1">
-        <Skeleton className="h-4 w-28" />
-        <Skeleton className="h-3 w-16" />
-      </div>
-    </div>
-
-    <div className="flex items-center">
-      <Skeleton className="h-6 w-20" />
-    </div>
-
-    <div className="flex items-center">
-      <Skeleton className="h-5 w-14" />
-    </div>
-
-    <div className="flex items-center">
-      <Skeleton className="h-5 w-14" />
-    </div>
-
-    <div className="flex items-center justify-end gap-2">
-      <Skeleton className="h-9 w-24" />
-      <Skeleton className="h-9 w-9" />
-    </div>
-  </div>
-);
-
-const Checkins = () => {
-  const API_URL =
-    import.meta.env.VITE_BACKEND_URL;
-
-  const queryClient =
-    useQueryClient();
-
-  const [isModalOpen, setIsModalOpen] =
-    useState(false);
-
-  const [search, setSearch] =
-    useState("");
-
-  const [formData, setFormData] =
-    useState({
-      memberName: "",
-      time: "",
-    });
-
-  // Queries
-  const {
-    data: checkins = [],
-    isLoading:
-      isLoadingCheckins,
-  } = useQuery({
-    queryKey: ["checkins"],
-
+  const { data: checkins = [], isLoading: isLoadingCheckins } = useQuery({
+    queryKey: ['checkins'],
     queryFn: async () => {
-      const res = await fetch(
-        `${API_URL}/api/checkins`
-      );
-
-      if (!res.ok) {
-        throw new Error(
-          "Failed to fetch check-ins"
-        );
-      }
-
-      return res.json();
+      const res = await fetch(`${API_URL}/api/checkins`)
+      if (!res.ok) throw new Error('Failed to fetch check-ins')
+      return res.json()
     },
-  });
+  })
 
-  const { data: members = [] } =
-    useQuery({
-      queryKey: ["members"],
+  const { data: members = [] } = useQuery({
+    queryKey: ['members'],
+    queryFn: async () => {
+      const res = await fetch(`${API_URL}/api/members`)
+      if (!res.ok) throw new Error('Failed to fetch members')
+      return res.json()
+    },
+  })
 
-      queryFn: async () => {
-        const res = await fetch(
-          `${API_URL}/api/members`
-        );
+  const addCheckinMutation = useMutation({
+    mutationFn: async (payload) => {
+      const res = await fetch(`${API_URL}/api/checkins`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error('Failed to add check-in')
+      return res.json()
+    },
+    onSuccess: (newCheckin) => {
+      queryClient.setQueryData(['checkins'], (prev = []) => [newCheckin, ...prev])
+      setFormData({ memberName: '', time: '' })
+      setIsModalOpen(false)
+    },
+  })
 
-        if (!res.ok) {
-          throw new Error(
-            "Failed to fetch members"
-          );
-        }
+  const checkoutMutation = useMutation({
+    mutationFn: async ({ id, check_out }) => {
+      const res = await fetch(`${API_URL}/api/checkins/${id}/checkout`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ check_out }),
+      })
+      if (!res.ok) throw new Error('Failed to check out')
+      return res.json()
+    },
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['checkins'], (prev = []) =>
+        prev.map((c) => (c.id === updated.id ? updated : c))
+      )
+    },
+  })
 
-        return res.json();
-      },
-    });
+  const deleteMutation = useMutation({
+    mutationFn: async (id) => {
+      const res = await fetch(`${API_URL}/api/checkins/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete check-in')
+      return id
+    },
+    onSuccess: (id) => {
+      queryClient.setQueryData(['checkins'], (prev = []) => prev.filter((c) => c.id !== id))
+    },
+  })
 
-  // Add Checkin Mutation
-  const addCheckinMutation =
-    useMutation({
-      mutationFn: async (
-        payload
-      ) => {
-        const res = await fetch(
-          `${API_URL}/api/checkins`,
-          {
-            method: "POST",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body: JSON.stringify(
-              payload
-            ),
-          }
-        );
-
-        if (!res.ok) {
-          throw new Error(
-            "Failed to add check-in"
-          );
-        }
-
-        return res.json();
-      },
-
-      onSuccess: (
-        newCheckin
-      ) => {
-        queryClient.setQueryData(
-          ["checkins"],
-          (prev = []) => [
-            newCheckin,
-            ...prev,
-          ]
-        );
-
-        setFormData({
-          memberName: "",
-          time: "",
-        });
-
-        setIsModalOpen(false);
-      },
-    });
-
-  // Checkout Mutation
-  const checkoutMutation =
-    useMutation({
-      mutationFn: async ({
-        id,
-        check_out,
-      }) => {
-        const res = await fetch(
-          `${API_URL}/api/checkins/${id}/checkout`,
-          {
-            method: "PUT",
-
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
-
-            body: JSON.stringify({
-              check_out,
-            }),
-          }
-        );
-
-        if (!res.ok) {
-          throw new Error(
-            "Failed to check out"
-          );
-        }
-
-        return res.json();
-      },
-
-      onSuccess: (
-        updated
-      ) => {
-        queryClient.setQueryData(
-          ["checkins"],
-          (prev = []) =>
-            prev.map((c) =>
-              c.id === updated.id
-                ? updated
-                : c
-            )
-        );
-      },
-    });
-
-  // Delete Mutation
-  const deleteMutation =
-    useMutation({
-      mutationFn: async (id) => {
-        const res = await fetch(
-          `${API_URL}/api/checkins/${id}`,
-          {
-            method: "DELETE",
-          }
-        );
-
-        if (!res.ok) {
-          throw new Error(
-            "Failed to delete check-in"
-          );
-        }
-
-        return id;
-      },
-
-      onSuccess: (id) => {
-        queryClient.setQueryData(
-          ["checkins"],
-          (prev = []) =>
-            prev.filter(
-              (c) => c.id !== id
-            )
-        );
-      },
-    });
-
-  // Open Modal
   const openModal = () => {
-    const currentTime =
-      new Date().toLocaleTimeString(
-        "en-GB",
-        {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }
-      );
+    const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+    setFormData({ memberName: '', time: currentTime })
+    setIsModalOpen(true)
+  }
 
-    setFormData({
-      memberName: "",
-      time: currentTime,
-    });
+  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value })
 
-    setIsModalOpen(true);
-  };
-
-  // Handle Change
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]:
-        e.target.value,
-    });
-  };
-
-  // Submit
-  const handleSubmit = async (
-    e
-  ) => {
-    e.preventDefault();
-
-    const alreadyCheckedIn =
-      checkins.some(
-        (c) =>
-          c.member_name ===
-            formData.memberName &&
-          !c.check_out
-      );
-
-    if (alreadyCheckedIn) {
-      alert(
-        "This member is already checked in."
-      );
-
-      return;
-    }
-
-    const selectedMember =
-      members.find(
-        (m) =>
-          m.name ===
-          formData.memberName
-      );
-
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    const alreadyCheckedIn = checkins.some((c) => c.member_name === formData.memberName && !c.check_out)
+    if (alreadyCheckedIn) { alert('This member is already checked in.'); return }
+    const selectedMember = members.find((m) => m.name === formData.memberName)
     addCheckinMutation.mutate({
-      member_name:
-        formData.memberName,
-
-      membership:
-        selectedMember?.plan ||
-        "Standard",
-
+      member_name: formData.memberName,
+      membership: selectedMember?.plan || 'Standard',
       check_in: formData.time,
-    });
-  };
+    })
+  }
 
-  // Checkout
-  const handleCheckout = (
-    id
-  ) => {
-    const check_out =
-      new Date().toLocaleTimeString(
-        "en-GB",
-        {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: false,
-        }
-      );
+  const handleCheckout = (id) => {
+    const check_out = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false })
+    checkoutMutation.mutate({ id, check_out })
+  }
 
-    checkoutMutation.mutate({
-      id,
-      check_out,
-    });
-  };
+  const formatTime = (time) => {
+    if (!time) return '-'
+    return new Date(`2026-01-01T${time}`).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  }
 
-  // Format Time
-  const formatTime = (
-    time
-  ) => {
-    if (!time) return "-";
+  const filteredCheckins = useMemo(() => {
+    return [...checkins]
+      .filter((c) => c.member_name.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => b.check_in.localeCompare(a.check_in))
+  }, [checkins, search])
 
-    return new Date(
-      `2026-01-01T${time}`
-    ).toLocaleTimeString(
-      "en-US",
-      {
-        hour: "numeric",
-        minute: "2-digit",
-      }
-    );
-  };
+  const totalCheckins = checkins.length
+  const activeMembers = checkins.filter((c) => !c.check_out).length
+  const checkedOutMembers = checkins.filter((c) => c.check_out).length
+  const isSubmitting = addCheckinMutation.isPending
 
-  // Filtered Checkins
-  const filteredCheckins =
-    useMemo(() => {
-      return [...checkins]
-        .filter((c) =>
-          c.member_name
-            .toLowerCase()
-            .includes(
-              search.toLowerCase()
-            )
-        )
-        .sort((a, b) =>
-          b.check_in.localeCompare(
-            a.check_in
-          )
-        );
-    }, [checkins, search]);
-
-  // Stats
-  const totalCheckins =
-    checkins.length;
-
-  const activeMembers =
-    checkins.filter(
-      (c) => !c.check_out
-    ).length;
-
-  const checkedOutMembers =
-    checkins.filter(
-      (c) => c.check_out
-    ).length;
-
-  const isSubmitting =
-    addCheckinMutation.isPending;
+  const inputCls = 'w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition'
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
+    <div className="p-6 min-h-full">
       {/* Header */}
-  <div className="p-6 bg-gray-50 min-h-screen">
-    {/* Header */}
-    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
-      <div>
-        <div className="flex items-center gap-3">
-          <h1 className="text-3xl font-bold">
-            Today's Check-ins
-          </h1>
-
-          <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-semibold">
-            {totalCheckins} Total
-          </span>
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-slate-900">Today's Check-ins</h1>
+            <span className="bg-indigo-50 text-indigo-700 px-3 py-0.5 rounded-full text-xs font-semibold">{totalCheckins} Total</span>
+          </div>
+          <p className="text-sm text-slate-400 mt-1">Track member attendance and gym activity</p>
         </div>
-
-        <p className="text-gray-500 mt-2">
-          Track member attendance and
-          gym activity
-        </p>
+        <button onClick={openModal} className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-indigo-700 transition shadow-sm">
+          <Plus size={16} />
+          Log Check-in
+        </button>
       </div>
 
-      <button
-        onClick={openModal}
-        className="flex items-center justify-center gap-2 bg-blue-600 text-white px-5 py-3 rounded-xl hover:bg-blue-700 transition"
-      >
-        <Plus size={18} />
-        Log Check-in
-      </button>
-    </div>
-
-    {/* Stats */}
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      {/* Total */}
-      <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-gray-500 text-sm">
-              Total Check-ins
-            </p>
-
-            <h2 className="text-3xl font-bold mt-1">
-              {totalCheckins}
-            </h2>
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {[
+          { label: 'Total Check-ins', value: totalCheckins, icon: Users, iconBg: 'bg-indigo-50', iconColor: 'text-indigo-600' },
+          { label: 'Active Inside', value: activeMembers, icon: CheckCircle2, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
+          { label: 'Checked Out', value: checkedOutMembers, icon: LogOut, iconBg: 'bg-violet-50', iconColor: 'text-violet-600' },
+        ].map(({ label, value, icon: Icon, iconBg, iconColor }) => (
+          <div key={label} className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-xs font-medium">{label}</p>
+                <h2 className="text-2xl font-bold text-slate-900 mt-1">{value}</h2>
+              </div>
+              <div className={`${iconBg} p-3 rounded-xl`}>
+                <Icon size={20} className={iconColor} />
+              </div>
+            </div>
           </div>
-
-          <div className="bg-blue-100 text-blue-700 p-3 rounded-xl">
-            <Users size={24} />
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* Active */}
-      <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-gray-500 text-sm">
-              Active Inside
-            </p>
-
-            <h2 className="text-3xl font-bold mt-1">
-              {activeMembers}
-            </h2>
-          </div>
-
-          <div className="bg-green-100 text-green-700 p-3 rounded-xl">
-            <CheckCircle2 size={24} />
-          </div>
+      {/* Search */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 mb-6">
+        <div className="relative">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search member..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full border border-slate-200 rounded-xl pl-10 pr-4 py-2.5 text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+          />
         </div>
       </div>
 
-      {/* Checked Out */}
-      <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-gray-500 text-sm">
-              Checked Out
-            </p>
-
-            <h2 className="text-3xl font-bold mt-1">
-              {checkedOutMembers}
-            </h2>
-          </div>
-
-          <div className="bg-purple-100 text-purple-700 p-3 rounded-xl">
-            <LogOut size={24} />
-          </div>
+      {/* Table */}
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+        <div className="hidden md:grid grid-cols-5 gap-4 p-4 bg-slate-50 border-b border-slate-100 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+          <div>Member</div>
+          <div>Membership</div>
+          <div>Check-in</div>
+          <div>Check-out</div>
+          <div className="text-right">Actions</div>
         </div>
-      </div>
-    </div>
 
-    {/* Search */}
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 mb-6">
-      <div className="relative flex-1">
-        <Search
-          size={18}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-        />
-
-        <input
-          type="text"
-          placeholder="Search member..."
-          value={search}
-          onChange={(e) =>
-            setSearch(e.target.value)
-          }
-          className="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-3 outline-none focus:ring-2 focus:ring-blue-400"
-        />
-      </div>
-    </div>
-
-    {/* Table */}
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-      {/* Header */}
-      <div className="hidden md:grid grid-cols-5 gap-4 p-4 bg-gray-100 border-b text-sm font-semibold text-gray-600">
-        <div>Member</div>
-        <div>Membership</div>
-        <div>Check-in</div>
-        <div>Check-out</div>
-        <div className="text-right">
-          Actions
-        </div>
-      </div>
-
-      {/* Rows */}
-      {isLoadingCheckins ? (
-        Array.from({ length: 5 }).map(
-          (_, i) => (
-            <SkeletonRow key={i} />
-          )
-        )
-      ) : filteredCheckins.length >
-        0 ? (
-        filteredCheckins.map(
-          (checkin) => {
-            const isCheckingOut =
-              checkoutMutation.isPending &&
-              checkoutMutation
-                .variables?.id ===
-                checkin.id;
-
-            const isDeleting =
-              deleteMutation.isPending &&
-              deleteMutation
-                .variables ===
-                checkin.id;
-
-            const isRowBusy =
-              isCheckingOut ||
-              isDeleting;
+        {isLoadingCheckins ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="grid grid-cols-5 gap-4 p-4 border-b border-slate-50">
+              <div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-slate-100 animate-pulse" /><div className="space-y-2"><div className="h-4 w-24 bg-slate-100 rounded animate-pulse" /><div className="h-3 w-14 bg-slate-100 rounded animate-pulse" /></div></div>
+              <div className="flex items-center"><div className="h-5 w-16 bg-slate-100 rounded animate-pulse" /></div>
+              <div className="flex items-center"><div className="h-5 w-12 bg-slate-100 rounded animate-pulse" /></div>
+              <div className="flex items-center"><div className="h-5 w-12 bg-slate-100 rounded animate-pulse" /></div>
+              <div className="flex items-center justify-end gap-2"><div className="h-8 w-20 bg-slate-100 rounded animate-pulse" /></div>
+            </div>
+          ))
+        ) : filteredCheckins.length > 0 ? (
+          filteredCheckins.map((checkin) => {
+            const isCheckingOut = checkoutMutation.isPending && checkoutMutation.variables?.id === checkin.id
+            const isDeleting = deleteMutation.isPending && deleteMutation.variables === checkin.id
+            const isRowBusy = isCheckingOut || isDeleting
 
             return (
               <div
                 key={checkin.id}
-                className={`grid grid-cols-1 md:grid-cols-5 gap-4 p-4 border-b last:border-b-0 transition ${
-                  isRowBusy
-                    ? "opacity-60 pointer-events-none"
-                    : "hover:bg-gray-50"
-                }`}
+                className={`grid grid-cols-1 md:grid-cols-5 gap-4 p-4 border-b border-slate-50 last:border-b-0 transition ${isRowBusy ? 'opacity-50 pointer-events-none' : 'hover:bg-slate-50/50'}`}
               >
-                {/* Member */}
                 <div className="flex items-center gap-3">
-                  <div className="w-11 h-11 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center font-semibold">
-                    {checkin.member_name.charAt(
-                      0
-                    )}
+                  <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                    {checkin.member_name.charAt(0)}
                   </div>
-
                   <div>
-                    <h3 className="font-semibold">
-                      {
-                        checkin.member_name
-                      }
-                    </h3>
-
-                    <p className="text-sm text-gray-500">
-                      Gym Member
-                    </p>
+                    <h3 className="font-semibold text-sm text-slate-900">{checkin.member_name}</h3>
+                    <p className="text-xs text-slate-400">Gym Member</p>
                   </div>
                 </div>
-
-                {/* Membership */}
                 <div className="flex items-center">
-                  <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-sm font-medium">
-                    {checkin.membership}
-                  </span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-medium">{checkin.membership}</span>
                 </div>
-
-                {/* Check-in */}
-                <div className="flex items-center gap-2">
-                  <Clock size={16} />
-
-                  <span className="font-medium">
-                    {formatTime(
-                      checkin.check_in
-                    )}
-                  </span>
+                <div className="flex items-center gap-2 text-sm">
+                  <Clock size={14} className="text-slate-400" />
+                  <span className="font-medium text-slate-700">{formatTime(checkin.check_in)}</span>
                 </div>
-
-                {/* Check-out */}
                 <div className="flex items-center">
                   {checkin.check_out ? (
-                    <span className="font-medium text-gray-700">
-                      {formatTime(
-                        checkin.check_out
-                      )}
-                    </span>
+                    <span className="font-medium text-sm text-slate-700">{formatTime(checkin.check_out)}</span>
                   ) : (
-                    <span className="text-orange-500 text-sm font-medium">
-                      Still Active
-                    </span>
+                    <span className="text-amber-500 text-xs font-semibold">Still Active</span>
                   )}
                 </div>
-
-                {/* Actions */}
                 <div className="flex items-center justify-end gap-2">
-                  {/* Checkout */}
                   <button
-                    onClick={() =>
-                      handleCheckout(
-                        checkin.id
-                      )
-                    }
-                    disabled={
-                      !!checkin.check_out ||
-                      isRowBusy
-                    }
-                    className="px-3 py-2 rounded-lg bg-green-100 text-green-700 hover:bg-green-200 disabled:opacity-50 disabled:cursor-not-allowed transition text-sm font-medium flex items-center gap-1.5 min-w-[96px] justify-center"
+                    onClick={() => handleCheckout(checkin.id)}
+                    disabled={!!checkin.check_out || isRowBusy}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed transition text-xs font-semibold flex items-center gap-1.5 min-w-[90px] justify-center"
                   >
-                    {isCheckingOut ? (
-                      <>
-                        <Loader2
-                          size={14}
-                          className="animate-spin"
-                        />
-                        Saving…
-                      </>
-                    ) : checkin.check_out ? (
-                      "Checked Out"
-                    ) : (
-                      "Check Out"
-                    )}
+                    {isCheckingOut ? <><Loader2 size={12} className="animate-spin" /> Saving…</> : checkin.check_out ? 'Checked Out' : 'Check Out'}
                   </button>
-
-                  {/* Delete */}
                   <button
-                    onClick={() =>
-                      deleteMutation.mutate(
-                        checkin.id
-                      )
-                    }
+                    onClick={() => deleteMutation.mutate(checkin.id)}
                     disabled={isRowBusy}
-                    className="p-2 rounded-lg hover:bg-red-100 text-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 rounded-lg hover:bg-rose-50 text-rose-500 transition disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    {isDeleting ? (
-                      <Loader2
-                        size={18}
-                        className="animate-spin"
-                      />
-                    ) : (
-                      <Trash2 size={18} />
-                    )}
+                    {isDeleting ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                   </button>
                 </div>
               </div>
-            );
-          }
-        )
-      ) : (
-        <div className="p-10 text-center text-gray-400">
-          No check-ins found
+            )
+          })
+        ) : (
+          <div className="p-10 text-center text-sm text-slate-400">No check-ins found</div>
+        )}
+      </div>
+
+      {/* Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-bold text-slate-900">Log Check-in</h2>
+              <button onClick={() => setIsModalOpen(false)} disabled={isSubmitting} className="text-slate-400 hover:text-slate-900 transition disabled:opacity-50">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block mb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">Member</label>
+                <select name="memberName" value={formData.memberName} onChange={handleChange} required disabled={isSubmitting} className={inputCls}>
+                  <option value="">Select member</option>
+                  {members.map((m) => <option key={m.id} value={m.name}>{m.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block mb-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">Check-in Time</label>
+                <input type="time" name="time" value={formData.time} onChange={handleChange} required disabled={isSubmitting} className={inputCls} />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={() => setIsModalOpen(false)} disabled={isSubmitting} className="px-4 py-2 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition disabled:opacity-50">
+                  Cancel
+                </button>
+                <button type="submit" disabled={isSubmitting} className="bg-indigo-600 text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-70 flex items-center gap-2 min-w-[120px] justify-center">
+                  {isSubmitting ? <><Loader2 size={14} className="animate-spin" /> Saving…</> : 'Save Check-in'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
-
-    {/* Modal */}
-    {isModalOpen && (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-xl">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold">
-              Log Check-in
-            </h2>
-
-            <button
-              onClick={() =>
-                setIsModalOpen(false)
-              }
-              disabled={isSubmitting}
-              className="text-gray-500 hover:text-black disabled:opacity-50"
-            >
-              <X size={22} />
-            </button>
-          </div>
-
-          {/* Form */}
-          <form
-            onSubmit={handleSubmit}
-            className="space-y-4"
-          >
-            {/* Member */}
-            <div>
-              <label className="block mb-1 font-medium">
-                Member
-              </label>
-
-              <select
-                name="memberName"
-                value={formData.memberName}
-                onChange={handleChange}
-                required
-                disabled={isSubmitting}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed"
-              >
-                <option value="">
-                  Select member
-                </option>
-
-                {members.map(
-                  (member) => (
-                    <option
-                      key={member.id}
-                      value={member.name}
-                    >
-                      {member.name}
-                    </option>
-                  )
-                )}
-              </select>
-            </div>
-
-            {/* Time */}
-            <div>
-              <label className="block mb-1 font-medium">
-                Check-in Time
-              </label>
-
-              <input
-                type="time"
-                name="time"
-                value={formData.time}
-                onChange={handleChange}
-                required
-                disabled={isSubmitting}
-                className="w-full border border-gray-300 rounded-xl px-4 py-3 outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-50 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            {/* Buttons */}
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setIsModalOpen(false)
-                }
-                disabled={isSubmitting}
-                className="px-4 py-2 border border-gray-300 rounded-xl hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="bg-blue-600 text-white px-5 py-2 rounded-xl hover:bg-blue-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2 min-w-[130px] justify-center"
-              >
-                {isSubmitting ? (
-                  <>
-                    <Loader2
-                      size={16}
-                      className="animate-spin"
-                    />
-                    Saving…
-                  </>
-                ) : (
-                  "Save Check-in"
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    )}
-  </div>    
-</div>
-  );
-};
-
-export default Checkins;
+  )
+}
