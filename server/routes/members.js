@@ -136,42 +136,45 @@ router.put("/:id", async (req, res) => {
       emergency_contact,
       goal,
     } = req.body;
+const result = await pool.query(
+  `
+  UPDATE members
 
-    const result = await pool.query(
-      `
-      UPDATE members
+  SET
+    name = $1,
+    plan = $2,
+    status = $3,
+    joined = $4,
 
-      SET
-        name = $1,
-        plan = $2,
-        status = $3,
-        joined = $4,
+    phone = $5,
+    email = $6,
+    address = $7,
+    date_of_birth = $8,
+    gender = $9,
+    emergency_contact = $10,
+    goal = $11
 
-        phone = $5,
-        email = $6,
-        address = $7,
-        date_of_birth = $8,
-        gender = $9,
-        emergency_contact = $10,
-        goal = $11
+  WHERE id = $12
 
-      WHERE id = $12
+  RETURNING *
+  `,
+  [
+    name,
+    plan,
+    status,
+    joined,
 
-      RETURNING *
-      `,
-        name,
-  plan,
-  status,
-  joined,
-  phone || null,
-  email || null,
-  address || null,
-  date_of_birth || null,
-  gender || null,
-  emergency_contact || null,
-  goal || null,
-  id,
-    );
+    phone || null,
+    email || null,
+    address || null,
+    date_of_birth || null,
+    gender || null,
+    emergency_contact || null,
+    goal || null,
+
+    id,
+  ]
+);
 
     if (result.rows.length === 0) {
       return res.status(404).json({
