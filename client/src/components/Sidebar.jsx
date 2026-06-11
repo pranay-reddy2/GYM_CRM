@@ -15,17 +15,17 @@ const NAV_GROUPS = [
   {
     label: 'Overview',
     items: [
-      { to: '/',        end: true, icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/members',           icon: Users,            label: 'Members'   },
-      { to: '/checkins',          icon: CalendarCheck,    label: 'Check-ins' },
+      { to: '/', end: true, icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/members', icon: Users, label: 'Members' },
+      { to: '/checkins', icon: CalendarCheck, label: 'Check-ins' },
     ],
   },
   {
     label: 'Manage',
     items: [
-      { to: '/trainers', icon: Dumbbell,   label: 'Trainers' },
-      { to: '/leads',    icon: Target,     label: 'Leads'    },
-      { to: '/billing',  icon: CreditCard, label: 'Billing'  },
+      { to: '/trainers', icon: Dumbbell, label: 'Trainers' },
+      { to: '/leads', icon: Target, label: 'Leads' },
+      { to: '/billing', icon: CreditCard, label: 'Billing' },
     ],
   },
   {
@@ -73,15 +73,24 @@ function Sidebar() {
         }
 
         .gsb {
-          display: flex;
-          flex-direction: column;
-          width: 232px;
-          min-width: 232px;
-          height: 100%;
-          background: #f8fafc;
-          border-right: 1px solid #e2e8f0;
-          overflow: hidden;
-        }
+  display: flex;
+  flex-direction: column;
+
+  width: 232px;
+  min-width: 232px;
+
+  position: fixed;
+  top: 0;
+  left: 0;
+
+  height: 100vh;
+
+  background: #f8fafc;
+  border-right: 1px solid #e2e8f0;
+
+  overflow: hidden;
+  z-index: 1000;
+}
 
         /* ── Logo ── */
         .gsb__logo {

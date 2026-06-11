@@ -5,13 +5,19 @@ import { BrowserRouter } from 'react-router-dom'
 function App() {
   return (
     <BrowserRouter>
-      <div className="flex h-screen">
-        <Sidebar />
-        <div className="flex-1 flex flex-col">
-          <Header />
-          <Maincontent />
-        </div>
-      </div>
+      <div className="min-h-screen">
+  <Sidebar />
+
+  <div
+    className="flex flex-col min-h-screen"
+    style={{
+      marginLeft: "232px",
+    }}
+  >
+    <Header />
+    <Maincontent />
+  </div>
+</div>
     </BrowserRouter>
   )
 }
