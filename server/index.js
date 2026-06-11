@@ -14,6 +14,7 @@ import alertsRouter from "./routes/alerts.js";
 import paymentsRouter from "./routes/payment.js";
 import settingsRouter from "./routes/settings.js";
 import trainersRoutes from "./routes/trainers.js";
+import trainerMembersRouter from "./routes/trainer-members.js";
 
 // Test DB connection
 pool.query("SELECT NOW()", (err, res) => {
@@ -47,6 +48,8 @@ app.use("/api/payments", paymentsRouter);
 app.use("/api/settings", settingsRouter);
 
 app.use("/api/trainers", trainersRoutes);
+
+app.use("/api/trainer-members", trainerMembersRouter);
 
 const PORT = process.env.PORT || 5000
 

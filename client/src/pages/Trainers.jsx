@@ -27,7 +27,6 @@ const Trainers = () => {
 
   const [selectedTrainer, setSelectedTrainer] =
     useState(null);
-
   const [formData, setFormData] =
     useState({
       name: "",
@@ -35,6 +34,10 @@ const Trainers = () => {
       email: "",
       specialization: "",
       status: "Active",
+
+      start_time: "",
+      end_time: "",
+      working_days: "",
     });
 
   const {
@@ -103,6 +106,14 @@ const Trainers = () => {
       status:
         trainer.status ||
         "Active",
+      start_time:
+        trainer.start_time || "",
+
+      end_time:
+        trainer.end_time || "",
+
+      working_days:
+        trainer.working_days || "",
     });
 
     setIsEditMode(true);
@@ -117,6 +128,10 @@ const Trainers = () => {
       email: "",
       specialization: "",
       status: "Active",
+
+      start_time: "",
+      end_time: "",
+      working_days: "",
     });
 
     setSelectedTrainer(null);
@@ -266,7 +281,7 @@ const Trainers = () => {
         </div>
 
         {filteredTrainers.length >
-        0 ? (
+          0 ? (
           filteredTrainers.map(
             (trainer) => (
               <div
@@ -337,6 +352,7 @@ const Trainers = () => {
                     />
                   </button>
                 </div>
+
               </div>
             )
           )
@@ -444,6 +460,30 @@ const Trainers = () => {
                     Inactive
                   </option>
                 </select>
+                <input
+                  type="time"
+                  name="start_time"
+                  value={formData.start_time}
+                  onChange={handleChange}
+                  className="border border-gray-300 rounded-xl px-4 py-3"
+                />
+
+                <input
+                  type="time"
+                  name="end_time"
+                  value={formData.end_time}
+                  onChange={handleChange}
+                  className="border border-gray-300 rounded-xl px-4 py-3"
+                />
+
+                <input
+                  type="text"
+                  name="working_days"
+                  placeholder="Mon,Tue,Wed,Thu,Fri"
+                  value={formData.working_days}
+                  onChange={handleChange}
+                  className="border border-gray-300 rounded-xl px-4 py-3 md:col-span-2"
+                />
               </div>
 
               <div className="flex justify-end gap-3">

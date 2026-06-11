@@ -46,11 +46,23 @@ export default function Dashboard() {
     queryFn: () => fetch(`${API_URL}/api/dashboard/stats`).then(r => r.json()),
   })
 
-  const { data: atRiskMembers = [] } = useQuery({
-    queryKey: ['dashboard-at-risk'],
-    queryFn: () => fetch(`${API_URL}/api/dashboard/at-risk`).then(r => r.json()),
-  })
+const { data: atRiskMembers = [] } = useQuery({
+  queryKey: ["dashboard-at-risk"],
 
+  queryFn: async () => {
+    const res = await fetch(
+      `${API_URL}/api/alerts/at-risk`
+    );
+
+    if (!res.ok) {
+      throw new Error(
+        "Failed to fetch at-risk members"
+      );
+    }
+
+    return res.json();
+  },
+});
   const { data: activity = [] } = useQuery({
     queryKey: ['dashboard-activity'],
     queryFn: () => fetch(`${API_URL}/api/dashboard/activity`).then(r => r.json()),
